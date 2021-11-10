@@ -11,7 +11,7 @@ app.use(cors());
 
 //  Database Connection uri
 const uri =
-  "mongodb+srv://sidnaz-dimond-house:20Ghqp17FJ53KxUr@cluster0.zrqkd.mongodb.net/myFirstDatabase?retryWrites=true&w=majority";
+  `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.zrqkd.mongodb.net/myFirstDatabase?retryWrites=true&w=majority`;
 const client = new MongoClient(uri, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
@@ -20,8 +20,8 @@ const client = new MongoClient(uri, {
 async function run() {
     try {
         await client.connect();
-        const database = client.db("sidnazDimond");
-        const DimondCollection = database.collection('product');
+        const database = client.db("sidnazWatch");
+        const watchCollection = database.collection('product');
         console.log("connection database Successfully");
         
     }
