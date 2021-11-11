@@ -32,7 +32,7 @@ async function run() {
 run().catch(console.dir);
 
 app.get('/', (req, res) => {
-  res.send('Hello, Sidnaz Diamond House')
+  res.send('Hello , Welcome to sidnaz watch house');
 })
 
 app.listen(port, () => {
