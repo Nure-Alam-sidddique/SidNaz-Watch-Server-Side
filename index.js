@@ -107,8 +107,17 @@ async function run() {
         };
         const updatedUser = await userCollection.updateOne(filter, updateDoc, options);
         res.json(updatedUser);
-        // console.log(updatedUser);
+        // console.log(updatedUser)
+      })
 
+      // Admin Post Method create Admin
+      app.put('/users/admin', async (req, res) => {
+        const user = req.body;
+        const filter = { email: user.email };
+        const updateDoc = { $set: { role: 'admin' } }
+        const sendData = await userCollection.updateOne(filter, updateDoc);
+        res.json(sendData);
+        console.log(sendData);
       })
 
     }
