@@ -5,11 +5,31 @@ const port = process.env.PORT || 5000;
 require("dotenv").config();
 const ObjectId = require('mongodb').ObjectId;
 const { MongoClient } = require("mongodb");  // monogodb Connection require
+const admin = require("firebase-admin");
 
 // middleWare
 app.use(express.json());
 app.use(cors());
 
+// JWT Token
+const serviceAccount = require('./sidnaz-watch-house-60806-firebase-adminsdk.json');
+  admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount)
+});
+async function verifyToken(req, res, next) {
+  if (req.headers?.authorization?.startsWith('Bearer  ')) {
+    const token = req.headers.authorization.split('  ')[1];
+    try {
+      const decodedUser = await admin.auth().verifyIdToken(token);
+      req.decodedEmail = decodedUser.email;
+      
+    }
+    catch {
+      
+    }
+  }
+  next();
+}
 //  Database Connection uri
 const uri =
   `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.zrqkd.mongodb.net/myFirstDatabase?retryWrites=true&w=majority`;
@@ -41,6 +61,36 @@ async function run() {
         res.json(singleProudct);
       })
 
+      //  Product Add to DataBase by Post Method
+      app.post('/products', async (req, res) => {
+        const product = req.body;
+        console.log(product);
+        const addProduct = await watchCollection.insertOne(product);
+        res.json(addProduct);
+        
+    })
+    //  Delete Single Product form database
+      app.delete("/products/:id", async (req, res) => {
+        const productId = req.params.id;
+        const query = { _id: ObjectId(productId) };
+        const productDelete = await watchCollection.deleteOne(query);
+        res.json(productDelete);
+      })
+      // Single Prduct Update
+      app.put('/products/:id', async (req, res) => {
+        const productId = req.params.id;
+        const product = req.body;
+        console.log(productId);
+        console.log(product);
+        const filter = { _id: ObjectId(productId) };
+        const options = { upsert: true };
+        const updateDocs = { $set: product}
+        const updateDate = await watchCollection.updateOne(filter, updateDocs, options);
+        console.log(updateDate);
+        res.json(updateDate);
+  
+      })
+
       //  Post Order
       app.post('/placeOrders', async (req, res) => {
         const order = req.body;
@@ -54,7 +104,11 @@ async function run() {
         const myorders = await cursor.toArray();
         res.json(myorders);
       })
-
+        app.get('/orders', async(req,res)=>{
+          const cursor = orderCollection.find({});
+          const customerOrders = await cursor.toArray();
+          res.json(customerOrders);
+        })
        // Review Get Method
       app.get('/review', async (req, res) => {
         const cursor = reviewCollection.find({});
@@ -93,6 +147,18 @@ async function run() {
         res.json(FindUser);
       })
 
+      //  Single User Get Method for checking  Admin Role or Not ! 
+      app.get('/users/:email', async (req, res) => {
+        const email = req.params.email;
+        const query = { email: email };
+        const singleUser = await userCollection.findOne(query);
+        let isAdmin = false;
+        if (singleUser?.role ==="admin") {
+          isAdmin = true;
+        }
+        res.json({admin: isAdmin})
+      })
+
       // Update method user 
       app.put('/users', async(req,res)=>{
         const user = req.body;
@@ -111,13 +177,25 @@ async function run() {
       })
 
       // Admin Post Method create Admin
-      app.put('/users/admin', async (req, res) => {
+      app.put('/users/admin', verifyToken, async (req, res) => {
         const user = req.body;
-        const filter = { email: user.email };
-        const updateDoc = { $set: { role: 'admin' } }
-        const sendData = await userCollection.updateOne(filter, updateDoc);
-        res.json(sendData);
-        console.log(sendData);
+        // console.log('put', req.headers);
+        // console.log('put', req.decodedEmail);
+        const requester = req.decodedEmail;
+        if (requester) {
+          const requesterAccount = await userCollection.findOne({ email: requester });
+          if (requesterAccount.role === 'admin') {
+             const filter = { email: user.email };
+             const updateDoc = { $set: { role: "admin" } };
+             const sendData = await userCollection.updateOne(filter, updateDoc);
+             res.json(sendData);
+             console.log(sendData);
+          }
+        }
+        else {
+          res.status(403).json({ message: 'You do not have access to make Admin' });
+        }
+       
       })
 
     }
